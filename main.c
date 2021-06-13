@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <libc.h>
+#include "builtins/functions.h"
 
-int lsh_cd(char **args);
 
-int lsh_exit(char **args);
 
 char *builtin_str[] = {
         "cd",
@@ -11,27 +10,15 @@ char *builtin_str[] = {
 };
 
 int (*builtin_func[])(char **) = {
-        &lsh_cd,
-        &lsh_exit
+        &change_dir,
+        &exit_shell
 };
 
-int lsh_num_buildins() {
+int num_buildins() {
     return sizeof(builtin_func) / sizeof(char *);
 }
 
-int lsh_cd(char **args) {
-    if (args[1] == NULL) {
-        fprintf(stderr, "Expected argument\n");
-        return 1;
-    } else if (chdir(args[1]) != 0){
-        perror("Error chdir");
-    }
-    return 0;
-}
 
-int lsh_exit() {
-    return 0;
-}
 
 void check_exception(const char *buffer) {
     if (!buffer) {
@@ -40,9 +27,9 @@ void check_exception(const char *buffer) {
     }
 }
 
-#define LSH_RL_BUFSIZE 1024
-char *lsh_read_line(void) {
-    int bufsize = LSH_RL_BUFSIZE;
+#define RL_BUFSIZE 1024
+char *read_line(void) {
+    int bufsize = RL_BUFSIZE;
     int position = 0;
     char *buffer = malloc(bufsize * sizeof(char *));
     int c;
@@ -61,7 +48,7 @@ char *lsh_read_line(void) {
         position++;
 
         if (position >= bufsize) {
-            bufsize += LSH_RL_BUFSIZE;
+            bufsize += RL_BUFSIZE;
             buffer = realloc(buffer, bufsize);
             check_exception(buffer);
         }
@@ -69,33 +56,33 @@ char *lsh_read_line(void) {
 }
 
 
-#define LSH_TOK_BUFSIZE 64
-#define LSH_TOK_DELIM " \t\r\n\a"
-char **lsh_split_line(char *line) {
-    int bufsize = LSH_RL_BUFSIZE;
+#define TOK_BUFF_SIZE 64
+#define TOK_DELIMITER " \t\r\n\a"
+char **split_line(char *line) {
+    int buf_size = RL_BUFSIZE;
     int position = 0;
-    char **tokens = malloc(bufsize * sizeof(char *));
+    char **tokens = malloc(buf_size * sizeof(char *));
     char *token;
 
     check_exception((const char *) tokens);
 
-    token = strtok(line, LSH_TOK_DELIM);
+    token = strtok(line, TOK_DELIMITER);
     while (token != NULL) {
         tokens[position] = token;
         position++;
 
-        if (position >= bufsize) {
-            bufsize += LSH_TOK_BUFSIZE;
-            tokens = realloc(tokens, bufsize * sizeof(char *));
+        if (position >= buf_size) {
+            buf_size += TOK_BUFF_SIZE;
+            tokens = realloc(tokens, buf_size * sizeof(char *));
             check_exception(*tokens);
         }
 
-        token = strtok(NULL, LSH_TOK_DELIM);
+        token = strtok(NULL, TOK_DELIMITER);
     }
     return tokens;
 }
 
-int lsh_launch(char **args) {
+int launch(char **args) {
     pid_t pid;
     int status;
 
@@ -117,20 +104,20 @@ int lsh_launch(char **args) {
     return 1;
 }
 
-int lsh_execute(char **args) {
+int execute_cmd(char **args) {
     int i;
 
     if (args[0] == NULL) {
         return 1;
     }
 
-    for (i = 0; i < lsh_num_buildins(); i++) {
+    for (i = 0; i < num_buildins(); i++) {
         if (strcmp(args[0], builtin_str[i]) == 0) {
             return (*builtin_func[i])(args);
         }
     }
 
-    return lsh_launch(args);
+    return launch(args);
 }
 
 void lsh_loop(void) {
@@ -141,9 +128,9 @@ void lsh_loop(void) {
 
     do {
         printf("> ");
-        line = lsh_read_line();
-        args = lsh_split_line(line);
-        status = lsh_execute(args);
+        line = read_line();
+        args = split_line(line);
+        status = execute_cmd(args);
         free(line);
         free(args);
     } while (status);
