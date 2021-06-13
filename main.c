@@ -120,7 +120,7 @@ int execute_cmd(char **args) {
     return launch(args);
 }
 
-void lsh_loop(void) {
+void loop(void) {
     printf("Pid: %d\n", getpid());
     char *line;
     char **args;
@@ -137,6 +137,6 @@ void lsh_loop(void) {
 }
 
 int main() {
-    lsh_loop();
+    loop();
     return 0;
 }
